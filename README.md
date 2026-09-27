@@ -1,3 +1,5 @@
+*This Project was created by khhammou*
+
 # Stockholm
 
 A harmless ransomware simulation for educational purposes — 42 Cybersecurity Piscine.
@@ -22,6 +24,35 @@ python3 stockholm --version
 
 # Show help
 python3 stockholm --help
+```
+
+## Tests
+First we build the image and create the infection folder
+Then you create some fake files and run make run to encrypt them
+copy the key you got to decrypt later
+Verify using ls ~/infection the file extensions
+then reverse the encryption and verify file extension returned to original form
+verify silent mode works
+verify unsupported extensions dont get encrypted
+verify already encrypted files are skipped
+Try to decrypyt with a fake key and fail
+
+```
+make build
+mkdir -p ~/infection
+echo "hello" > ~/infection/test.txt
+echo "hello" > ~/infection/test.docx
+make run
+ls ~/infection
+make reverse
+ls ~/infection
+echo "hello" > ~/infection/test.txt
+make silent
+ls ~/infection/
+echo "ignore me" > ~/infection/ignore.xyz
+echo "encrypt me" > ~/infection/doc.docx
+make run
+ls ~/infection/
 ```
 
 ## How it works
